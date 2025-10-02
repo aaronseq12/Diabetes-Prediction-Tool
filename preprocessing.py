@@ -1,75 +1,70 @@
 # preprocessing.py
-# Author: Aaron Emmanuel Xavier Sequeira
 # Description: This script provides a function to preprocess the diabetes dataset.
 # It handles missing values by imputing them with the mean and standardizes the features.
 
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
+from typing import Tuple
 
-def preprocess_diabetes_data(diabetes_dataset):
+def clean_and_preprocess_data(raw_data: pd.DataFrame) -> Tuple[pd.DataFrame, StandardScaler]:
     """
-    Preprocesses the input diabetes dataset.
+    Preprocesses the input diabetes dataset by handling missing values and scaling features.
 
     Args:
-        diabetes_dataset (pd.DataFrame): The raw diabetes dataset.
+        raw_data (pd.DataFrame): The raw diabetes dataset.
 
     Returns:
         tuple: A tuple containing:
             - pd.DataFrame: The preprocessed and scaled dataset.
             - StandardScaler: The fitted scaler object used for standardization.
     """
-    print("--- Initial Data ---")
-    print(diabetes_dataset.head())
-    print("\n--- Statistical Summary (Initial) ---")
-    print(diabetes_dataset.describe())
-    
-    # Identifying zero values in columns where zero is not a valid value
-    columns_to_impute = ['Glucose', 'BloodPressure', 'SkinThickness', 'Insulin', 'BMI']
-    
-    print("\n--- Replacing 0 values with NaN ---")
-    for column in columns_to_impute:
-        diabetes_dataset[column] = diabetes_dataset[column].replace(0, np.nan)
-        
-    # Imputing NaN values with the mean of the respective column
-    print("--- Imputing NaN values with mean ---")
-    for column in columns_to_impute:
-        diabetes_dataset[column] = diabetes_dataset[column].fillna(diabetes_dataset[column].mean())
+    print("--- Starting Data Preprocessing ---")
+
+    # Make a copy to avoid modifying the original DataFrame
+    processed_data = raw_data.copy()
+
+    # Columns where a value of 0 is physiologically improbable and should be treated as missing data
+    columns_with_improbable_zeros = ['Glucose', 'BloodPressure', 'SkinThickness', 'Insulin', 'BMI']
+
+    print("\n--- Replacing 0 values with NaN for imputation ---")
+    for col in columns_with_improbable_zeros:
+        processed_data[col] = processed_data[col].replace(0, np.nan)
+
+    print("--- Imputing NaN values with the mean of each column ---")
+    for col in columns_with_improbable_zeros:
+        mean_value = processed_data[col].mean()
+        processed_data[col] = processed_data[col].fillna(mean_value)
 
     print("\n--- Data after imputation ---")
-    print(diabetes_dataset.head())
-    print("\n--- Statistical Summary (After Imputation) ---")
-    print(diabetes_dataset.describe())
+    print(processed_data.head())
 
-    # Data Standardization
-    print("\n--- Standardizing Data ---")
-    features = diabetes_dataset.drop('Outcome', axis=1)
-    target = diabetes_dataset['Outcome']
-    
-    # Initialize the StandardScaler
+    # Separate features and target variable
+    features = processed_data.drop('Outcome', axis=1)
+    target = processed_data['Outcome']
+
+    # Standardize the features
+    print("\n--- Standardizing feature data ---")
     scaler = StandardScaler()
-    
-    # Fit and transform the features
     scaled_features = scaler.fit_transform(features)
-    
-    # Create a new DataFrame with the scaled features
-    scaled_dataset = pd.DataFrame(scaled_features, columns=features.columns)
-    
-    # Add the 'Outcome' column back
-    scaled_dataset['Outcome'] = target.values
-    
+
+    # Create a new DataFrame with the scaled features and original column names
+    scaled_feature_df = pd.DataFrame(scaled_features, columns=features.columns)
+
+    # Combine scaled features with the target variable
+    final_dataset = pd.concat([scaled_feature_df, target.reset_index(drop=True)], axis=1)
+
     print("\n--- Standardized Dataset Summary ---")
-    print(scaled_dataset.describe().round(2))
-    
-    return scaled_dataset, scaler
+    print(final_dataset.describe().round(2))
+
+    return final_dataset, scaler
 
 if __name__ == '__main__':
-    # Example usage:
     try:
         raw_diabetes_df = pd.read_csv('diabetes.csv')
-        processed_df, fitted_scaler = preprocess_diabetes_data(raw_diabetes_df)
+        processed_df, fitted_scaler = clean_and_preprocess_data(raw_diabetes_df)
         print("\n--- Preprocessing Complete ---")
         print("Processed DataFrame head:")
         print(processed_df.head())
     except FileNotFoundError:
-        print("Error: 'diabetes.csv' not found. Please ensure the dataset is in the correct directory.")
+        print("Error: 'diabetes.csv' not found. Please ensure the dataset is in the current directory.")
