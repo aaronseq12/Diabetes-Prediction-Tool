@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Diabetes Prediction</title>
+    <title>Diabetes Prediction Tool</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="container">
         <div class="card">
-            <h1>Diabetes Prediction Tool</h1>
-            <p class="subtitle">Enter patient details to predict the likelihood of diabetes.</p>
-            
+            <h1>Diabetes Prediction Tool 🩺</h1>
+            <p class="subtitle">Enter the patient's details below to predict the likelihood of diabetes.</p>
+
             <form id="prediction-form">
                 <div class="form-grid">
                     <div class="form-group">
@@ -20,7 +20,7 @@
                         <input type="number" id="pregnancies" name="Pregnancies" placeholder="e.g., 1" required>
                     </div>
                     <div class="form-group">
-                        <label for="glucose">Glucose</label>
+                        <label for="glucose">Glucose (mg/dL)</label>
                         <input type="number" id="glucose" name="Glucose" placeholder="e.g., 120" required>
                     </div>
                     <div class="form-group">
@@ -33,10 +33,10 @@
                     </div>
                     <div class="form-group">
                         <label for="insulin">Insulin (mu U/ml)</label>
-                        <input type="number" id="insulin" name="Insulin" placeholder="e.g., 30.5" required>
+                        <input type="number" step="0.1" id="insulin" name="Insulin" placeholder="e.g., 30.5" required>
                     </div>
                     <div class="form-group">
-                        <label for="bmi">BMI</label>
+                        <label for="bmi">BMI (kg/m²)</label>
                         <input type="number" step="0.1" id="bmi" name="BMI" placeholder="e.g., 32.1" required>
                     </div>
                     <div class="form-group">
@@ -49,7 +49,7 @@
                     </div>
                 </div>
                 <div class="button-container">
-                    <button type="submit" class="btn-predict">Predict</button>
+                    <button type="submit" class="btn-predict">Get Prediction</button>
                 </div>
             </form>
 
@@ -60,12 +60,18 @@
                 <p id="confidence-score"></p>
             </div>
         </div>
+
+        <div class="card feature-importance-card">
+            <h2>Model Feature Importance</h2>
+            <p class="subtitle">This chart shows which factors the model considers most important for making a prediction. Higher values indicate greater impact.</p>
+            <img src="{{ url_for('static', filename='shap_feature_importance.png') }}" alt="Feature Importance Plot" style="width: 100%; border-radius: 0.5rem;">
+        </div>
     </div>
 
     <script>
         document.getElementById('prediction-form').addEventListener('submit', async function (event) {
             event.preventDefault();
-            
+
             const resultSection = document.getElementById('result-section');
             const loader = document.getElementById('loader');
             const predictionText = document.getElementById('prediction-text');
@@ -85,9 +91,7 @@
             try {
                 const response = await fetch('/predict', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(patientData),
                 });
 
