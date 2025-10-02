@@ -1,7 +1,10 @@
-The main libraries in python for running this predictor tool:
-```matplotlib```
-```pandas```
-```Keras```
-```NumPy```
-```seaborn```
-```scikit-learn```
+Flask==3.0.0
+gunicorn==21.2.0
+joblib==1.3.2
+matplotlib==3.8.2
+numpy==1.26.2
+pandas==2.1.4
+scikit-learn==1.3.2
+seaborn==0.13.0
+xgboost==2.0.3
+shap==0.44.0
