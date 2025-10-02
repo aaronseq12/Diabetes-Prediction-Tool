@@ -1,53 +1,52 @@
 # main.py
-# Author: Aaron Emmanuel Xavier Sequeira
 # Description: This script handles the complete machine learning pipeline:
 # 1. Loads and preprocesses the dataset.
 # 2. Splits the data into training and testing sets.
 # 3. Trains an XGBoost classifier.
 # 4. Evaluates the model's performance.
-# 5. Saves the trained model and the data scaler for future use.
+# 5. Generates and saves a SHAP feature importance plot.
+# 6. Saves the trained model and the data scaler for future use.
 
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from xgboost import XGBClassifier
 import joblib
 import seaborn as sns
 import matplotlib.pyplot as plt
-from preprocessing import preprocess_diabetes_data
+from preprocessing import clean_and_preprocess_data
 import os
+import shap
 
-def train_and_evaluate_model():
+def train_evaluate_and_save_model():
     """
-    Main function to run the diabetes prediction model training and evaluation.
+    Main function to run the diabetes prediction model training, evaluation, and saving pipeline.
     """
     # 1. Load and Preprocess Data
-    print("Loading and preprocessing data...")
+    print("🚀 Starting the model training pipeline...")
     try:
         diabetes_dataset = pd.read_csv('diabetes.csv')
     except FileNotFoundError:
-        print("Error: 'diabetes.csv' not found. Please ensure the dataset is in the correct directory.")
+        print("❌ Error: 'diabetes.csv' not found. Please place the dataset in the root directory.")
         return
-        
-    # The preprocess function now returns the processed data and the scaler
-    processed_data, scaler = preprocess_diabetes_data(diabetes_dataset)
-    print("Data preprocessing complete.")
-    print("-" * 30)
+
+    processed_data, scaler = clean_and_preprocess_data(diabetes_dataset)
+    print("✅ Data preprocessing complete.")
+    print("-" * 50)
 
     # 2. Split Dataset
-    print("Splitting the dataset...")
+    print("🔪 Splitting the dataset into training and testing sets...")
     features = processed_data.drop('Outcome', axis=1)
     target = processed_data['Outcome']
-    
-    # Split data into 80% training and 20% testing
+
     X_train, X_test, y_train, y_test = train_test_split(features, target, test_size=0.2, random_state=42, stratify=target)
     print(f"Training set shape: {X_train.shape}")
     print(f"Testing set shape: {X_test.shape}")
-    print("-" * 30)
+    print("✅ Dataset splitting complete.")
+    print("-" * 50)
 
     # 3. Train XGBoost Model
-    print("Training the XGBoost model...")
-    # Initialize the XGBoost classifier with hyperparameters tuned for performance
+    print("🧠 Training the XGBoost model...")
     model = XGBClassifier(
         objective='binary:logistic',
         eval_metric='logloss',
@@ -59,44 +58,56 @@ def train_and_evaluate_model():
         colsample_bytree=0.8,
         random_state=42
     )
-    
     model.fit(X_train, y_train)
-    print("Model training complete.")
-    print("-" * 30)
+    print("✅ Model training complete.")
+    print("-" * 50)
 
     # 4. Evaluate the Model
-    print("Evaluating the model...")
-    # Predictions on the training set
-    y_train_predictions = model.predict(X_train)
-    train_accuracy = accuracy_score(y_train, y_train_predictions)
-    print(f"Training Accuracy: {train_accuracy * 100:.2f}%")
-
-    # Predictions on the testing set
-    y_test_predictions = model.predict(X_test)
-    test_accuracy = accuracy_score(y_test, y_test_predictions)
+    print("📊 Evaluating the model's performance...")
+    y_pred = model.predict(X_test)
+    test_accuracy = accuracy_score(y_test, y_pred)
     print(f"Testing Accuracy: {test_accuracy * 100:.2f}%")
     print("\nClassification Report on Test Data:")
-    print(classification_report(y_test, y_test_predictions))
-    
+    print(classification_report(y_test, y_pred))
+
     # Confusion Matrix
-    confusion_mat = confusion_matrix(y_test, y_test_predictions)
+    conf_matrix = confusion_matrix(y_test, y_pred)
     plt.figure(figsize=(8, 6))
-    sns.heatmap(confusion_mat, annot=True, fmt='d', cmap='Blues', 
-                xticklabels=['No Diabetes', 'Diabetes'], 
+    sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues',
+                xticklabels=['No Diabetes', 'Diabetes'],
                 yticklabels=['No Diabetes', 'Diabetes'])
     plt.xlabel('Predicted')
     plt.ylabel('Actual')
     plt.title('Confusion Matrix')
+    plt.savefig('static/confusion_matrix.png') # Save for potential use in the UI
     plt.show()
-    print("-" * 30)
+    print("✅ Model evaluation complete.")
+    print("-" * 50)
 
-    # 5. Save the Model and Scaler
-    print("Saving the model and scaler...")
+    # 5. Generate and Save SHAP Feature Importance Plot
+    print("🔍 Generating SHAP feature importance plot...")
+    explainer = shap.Explainer(model)
+    shap_values = explainer(X_test)
+    plt.figure(figsize=(10, 8))
+    shap.summary_plot(shap_values, X_test, plot_type="bar", show=False)
+    plt.title("Feature Importance (SHAP)")
+    plt.tight_layout()
+    # Save the plot to the static directory to be displayed on the web page
+    if not os.path.exists('static'):
+        os.makedirs('static')
+    plt.savefig('static/shap_feature_importance.png')
+    plt.show()
+    print("✅ SHAP plot saved to 'static/shap_feature_importance.png'.")
+    print("-" * 50)
+
+    # 6. Save the Model and Scaler
+    print("💾 Saving the trained model and scaler...")
     if not os.path.exists('models'):
         os.makedirs('models')
     joblib.dump(model, 'models/diabetes_model.pkl')
     joblib.dump(scaler, 'models/scaler.pkl')
-    print("Model and scaler saved successfully in the 'models' directory.")
+    print("✅ Model and scaler saved successfully in the 'models' directory.")
+    print("\n🎉 Pipeline finished successfully!")
 
 if __name__ == '__main__':
-    train_and_evaluate_model()
+    train_evaluate_and_save_model()
